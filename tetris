@@ -1,0 +1,70 @@
+#importing pygame and other
+import pygame
+pygame.init()
+import sys
+
+#window size
+SIZE_BLOCK = 30
+WIDTH = 12
+HEIGHT = 24
+WINDOW_SIZE = SIZE_BLOCK * WIDTH, SIZE_BLOCK * HEIGHT
+FPS = 60
+'''
+u can change paragraph WIDTH and HEIGHT(line 8,9)
+they should be two to one(if WIDTH = 10 should be HEIGHT = 20)
+'''
+GRAY = [40, 40, 40] #grid color
+WHITE = [255, 255, 255]
+BLACK = [0, 0, 0]
+
+screen = pygame.display.set_mode(WINDOW_SIZE) #creating window
+pygame.display.set_caption('♜♕tetris♛♖')
+clock = pygame.time.Clock()
+grid = [pygame.Rect(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK)
+        for x in range(WIDTH)
+            for y in range(HEIGHT)]
+
+figure_position = [
+    [(-1, 0), (-2, 0), (0, 0), (1, 0)], #stick
+    [(0, -1), (-1, -1), (-1, 0), (0, 0)], #cube
+    [(-1, 0), (-1, 1), (0, 0), (0, -1)], #lightning 1
+    [(0, 0), (-1, 0), (0, 1), (-1, -1)], #lightning 2
+    [(0, 0,), (0, -1), (0, 1), (-1, -1)], #symbol "⏋"
+    [(0, 0), (0, -1), (0, 1), (-1, 0)], #symbol "г"
+    [(0, 0), (0, -1), (1, 0), (-1, 0)] #symbol "┝"
+]
+
+figures = [[pygame.Rect(x + WIDTH// 2, y + 1, 1, 1) for x, y in fig_position] for fig_position in figure_position] #array in array
+figure_rect = pygame.Rect(0, 0, SIZE_BLOCK - 1, SIZE_BLOCK - 1)
+
+#figure = figures[0] #test stick
+#figure = figures[1] #test cube
+#figure = figures[2] #test lightning 1
+#figure = figures[3] #test lightning 2
+#figure = figures[4] #test symbol "⏋"
+#figure = figures[5] #test symbol "г"
+figure = figures[6] #test symbol "┝"
+
+while True:
+    dx = 0
+    screen.fill(BLACK)
+    for event in pygame.event.get(): #window creating №2
+        if event.type == pygame.QUIT:
+            sys.exit() #exit
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RIGHT: #move right(arrow right)
+                dx = 1
+            elif event.key == pygame.K_LEFT: #move left(arrow left)
+                dx = -1
+
+    for i in range(4): #use figure
+        figure[i].x += dx
+
+    for i in range(4): #test(line 38-44)
+        figure_rect.x = figure[i].x * SIZE_BLOCK
+        figure_rect.y = figure[i].y * SIZE_BLOCK
+        pygame.draw.rect(screen, WHITE, figure_rect)
+
+    [pygame.draw.rect(screen, GRAY, i_rect, 1) for i_rect in grid] #cell
+
+    pygame.display.update() #window update
