@@ -2,6 +2,8 @@
 import pygame
 pygame.init()
 import sys
+from copy import deepcopy
+from random import choice, randrange
 
 #window size
 SIZE_BLOCK = 30
@@ -24,6 +26,9 @@ grid = [pygame.Rect(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK)
         for x in range(WIDTH)
             for y in range(HEIGHT)]
 
+get_color = lambda : (randrange(0, 255), randrange(0, 255), randrange(0, 255))
+color = get_color()
+
 figure_position = [
     [(-1, 0), (-2, 0), (0, 0), (1, 0)], #stick
     [(0, -1), (-1, -1), (-1, 0), (0, 0)], #cube
@@ -34,16 +39,33 @@ figure_position = [
     [(0, 0), (0, -1), (1, 0), (-1, 0)] #symbol "┝"
 ]
 
-figures = [[pygame.Rect(x + WIDTH// 2, y + 1, 1, 1) for x, y in fig_position] for fig_position in figure_position] #array in array
+figures = [[pygame.Rect(x + WIDTH// 2, y + 1, 1, 1)
+            for x, y in fig_position]
+           for fig_position in figure_position] #array in array
 figure_rect = pygame.Rect(0, 0, SIZE_BLOCK - 1, SIZE_BLOCK - 1)
 
+field = [[0 for i in range(WIDTH)for i in range(HEIGHT)]]
+
+move_count, move_speed, move_limit = 0, 60, 2000 #variables creating
+# in paragraph "move_speed" (10) you can select other speed
+
+#test figures
 #figure = figures[0] #test stick
 #figure = figures[1] #test cube
 #figure = figures[2] #test lightning 1
 #figure = figures[3] #test lightning 2
 #figure = figures[4] #test symbol "⏋"
 #figure = figures[5] #test symbol "г"
-figure = figures[6] #test symbol "┝"
+#figure = figures[6] #test symbol "┝"
+figure = deepcopy(choice(figures)) #test random figure
+
+def check_borders(): #checking
+    if figure[i].x < 0 or figure[i].x > WIDTH - 1:
+        return False
+    #elif figure[i].y > HEIGHT or field[figure[i].y][figure[i].x]:
+    #    return False
+    return True
+
 
 while True:
     dx = 0
@@ -57,14 +79,40 @@ while True:
             elif event.key == pygame.K_LEFT: #move left(arrow left)
                 dx = -1
 
+    figure_old = deepcopy(figure)
+
     for i in range(4): #use figure
         figure[i].x += dx
+        if not check_borders(): #copy old figure
+            figure = deepcopy(figure_old)
+            break
 
-    for i in range(4): #test(line 38-44)
+    move_count += move_speed
+    if move_count > move_limit:
+        move_count = 0
+        figure_old = deepcopy(figure)
+        for i in range(4):
+            figure[i].y += 1
+            if not check_borders():
+                for i in range(4):
+                    field[figure_old[i].y][figure_old[i].x] = color
+                figure = deepcopy(choice(figures))
+                move_limit = 2000
+                break
+
+
+    for i in range(4): #test
         figure_rect.x = figure[i].x * SIZE_BLOCK
         figure_rect.y = figure[i].y * SIZE_BLOCK
         pygame.draw.rect(screen, WHITE, figure_rect)
 
     [pygame.draw.rect(screen, GRAY, i_rect, 1) for i_rect in grid] #cell
 
+    for y, row in enumerate(field):
+        for x, col in enumerate(row):
+            if col:
+                figure_rect.x, figure_rect.y = x + SIZE_BLOCK, y + SIZE_BLOCK
+                pygame.draw.rect(screen, col, figure_rect)
+
     pygame.display.update() #window update
+    clock.tick(FPS)
