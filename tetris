@@ -6,10 +6,11 @@ from copy import deepcopy
 from random import choice, randrange
 
 #window size
-SIZE_BLOCK = 30
-WIDTH = 12
-HEIGHT = 24
+SIZE_BLOCK = 36
+WIDTH = 10
+HEIGHT = 20
 WINDOW_SIZE = SIZE_BLOCK * WIDTH, SIZE_BLOCK * HEIGHT
+GAME_WINDOW_SIZE = 720, 720
 FPS = 60
 '''
 u can change paragraph WIDTH and HEIGHT(line 8,9)
@@ -18,16 +19,16 @@ they should be two to one(if WIDTH = 10 should be HEIGHT = 20)
 GRAY = [40, 40, 40] #grid color
 WHITE = [255, 255, 255]
 BLACK = [0, 0, 0]
+GREEN = [ 0, 255, 0]
+PURPLE = [139, 0, 255]
 
-screen = pygame.display.set_mode(WINDOW_SIZE) #creating window
+screen = pygame.display.set_mode(GAME_WINDOW_SIZE) #creating window
+game_screen = pygame.Surface(WINDOW_SIZE)
 pygame.display.set_caption('♜♕tetris♛♖')
 clock = pygame.time.Clock()
 grid = [pygame.Rect(x * SIZE_BLOCK, y * SIZE_BLOCK, SIZE_BLOCK, SIZE_BLOCK)
         for x in range(WIDTH)
             for y in range(HEIGHT)]
-
-get_color = lambda : (randrange(0, 255), randrange(0, 255), randrange(0, 255))
-color = get_color()
 
 figure_position = [
     [(-1, 0), (-2, 0), (0, 0), (1, 0)], #stick
@@ -44,7 +45,8 @@ figures = [[pygame.Rect(x + WIDTH// 2, y + 1, 1, 1)
            for fig_position in figure_position] #array in array
 figure_rect = pygame.Rect(0, 0, SIZE_BLOCK - 1, SIZE_BLOCK - 1)
 
-field = [[0 for i in range(WIDTH)for i in range(HEIGHT)]]
+field = [[0 for i in range(WIDTH)] for j in range(HEIGHT)]
+
 
 move_count, move_speed, move_limit = 0, 60, 2000 #variables creating
 # in paragraph "move_speed" (10) you can select other speed
@@ -59,16 +61,28 @@ move_count, move_speed, move_limit = 0, 60, 2000 #variables creating
 #figure = figures[6] #test symbol "┝"
 figure = deepcopy(choice(figures)) #test random figure
 
+
+get_color = lambda : (randrange(127, 255), randrange(127, 255), randrange(127, 255))
+#bg = pygame.image.load('img.jpg'.convert() #load picture
+main_font = pygame.font.SysFont('couriar', 65, bold=1)
+figure, next_figure = deepcopy(choice(figures)), deepcopy(choice(figures))
+color, next_color = get_color(), get_color()
+score, lines = 0, 0
+scores = {0: 0, 1: 100, 2: 300, 3: 700, 4: 1000}
+title = main_font.render('Tetris', 1, WHITE)
+title_score = main_font.render('score: ', 1, GREEN) #score
+#title_record = main_font.render('record: ', 1, PURPLE) #record
+
 def check_borders(): #checking
     if figure[i].x < 0 or figure[i].x > WIDTH - 1:
         return False
-    #elif figure[i].y > HEIGHT or field[figure[i].y][figure[i].x]:
-    #    return False
+    elif figure[i].y > HEIGHT - 1 or field[figure[i].y][figure[i].x]:
+        return False
     return True
-
 
 while True:
     dx = 0
+    rotate = False
     screen.fill(BLACK)
     for event in pygame.event.get(): #window creating №2
         if event.type == pygame.QUIT:
@@ -78,6 +92,10 @@ while True:
                 dx = 1
             elif event.key == pygame.K_LEFT: #move left(arrow left)
                 dx = -1
+            elif event.key == pygame.K_DOWN: #move speed +(arrow down)
+                move_limit = 100
+            elif event.key == pygame.K_UP: #rotate(arrow up)
+                rotate = True
 
     figure_old = deepcopy(figure)
 
@@ -96,23 +114,63 @@ while True:
             if not check_borders():
                 for i in range(4):
                     field[figure_old[i].y][figure_old[i].x] = color
-                figure = deepcopy(choice(figures))
+                figure, color = next_figure, next_color
+                next_figure, next_color = deepcopy(choice(figures)), get_color()
                 move_limit = 2000
                 break
 
+    center = figure[0]
+    figure_old = deepcopy(figure)
+    if rotate:
+        for i in range(4):
+            x = figure[i].y - center.y
+            y = figure[i].x - center.x
+            figure[i].x = center.x - x
+            figure[i].y = center.y + y
+            if not check_borders():
+                figure = deepcopy(figure_old)
+                break
+
+    line, lines = HEIGHT - 1, 0
+    for row in range(HEIGHT - 1, -1, -1):
+        count = 0
+        for i in range(WIDTH):
+            if field[row][i]:
+                count += 1
+            field[line][i] = field[row][i]
+        if count < WIDTH:
+            line -= 1
+        else:
+            move_speed += 3
+            lines += 1
+    score += scores[lines]
+
+    [pygame.draw.rect(screen, GRAY, i_rect, 1) for i_rect in grid]  # cell
 
     for i in range(4): #test
         figure_rect.x = figure[i].x * SIZE_BLOCK
         figure_rect.y = figure[i].y * SIZE_BLOCK
-        pygame.draw.rect(screen, WHITE, figure_rect)
-
-    [pygame.draw.rect(screen, GRAY, i_rect, 1) for i_rect in grid] #cell
+        pygame.draw.rect(screen, color, figure_rect)
 
     for y, row in enumerate(field):
         for x, col in enumerate(row):
             if col:
-                figure_rect.x, figure_rect.y = x + SIZE_BLOCK, y + SIZE_BLOCK
+                figure_rect.x, figure_rect.y = x * SIZE_BLOCK, y * SIZE_BLOCK
                 pygame.draw.rect(screen, col, figure_rect)
+
+    for i in range(4):  # test
+        figure_rect.x = next_figure[i].x * SIZE_BLOCK + 350
+        figure_rect.y = next_figure[i].y * SIZE_BLOCK + 185
+        pygame.draw.rect(screen, next_color, figure_rect)
+
+    screen.blit(title, (440, 50))
+    screen.blit(title_score, (440, 580))
+    screen.blit(main_font.render(str(score), 1, WHITE), (440, 650))
+
+    for i in range(WIDTH):
+        if field[0][i]:
+            field = [[0 for i in range(WIDTH)] for i in range(HEIGHT)]
+            score = 0
 
     pygame.display.update() #window update
     clock.tick(FPS)
